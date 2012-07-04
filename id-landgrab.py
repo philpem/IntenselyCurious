@@ -20,6 +20,7 @@ import urllib2
 import cookielib
 import re
 import htmlentitydefs
+from lxml import etree
 
 # IntenseDebate account ID
 ID_ACCT="a52f66556303bc0fe20312cfad5cc8b9"
@@ -79,6 +80,36 @@ def GetIDCommentScriptSrc(account, postid):
 		return rematch.group(1)
 	else:
 		return None
+
+# RE to extract IDCommentSubThread data (which is nested properly, unlike IDComment data)
+IDCST_RE = re.compile(r'IDCommentSubThread(?P<id>[0-9]+)')
+
+# Parse the comment tree, returning a dict mapping from ID to parent
+def ParseCommentTree(innerhtml):
+	def walk(tree, depth=0, parent=0):
+		lp = []
+
+		if 'id' in tree.keys():
+			tid = tree.get('id')
+			x = IDCST_RE.match(tid)
+			if x:
+				cid = int(x.group('id'))
+				lp = lp + [(cid, parent)]
+				print "  "*depth, depth, parent, cid, tree.tag, " [%s]" % tree.get('id')
+				for i in tree:
+					lp = lp + walk(i, depth+1, cid)
+				return lp
+
+		for i in tree:
+			lp = lp + walk(i, depth+1, parent)
+		return lp
+
+	# Fix IntenseDebate's broken XHTML and parse it
+	text = re.sub(r'<p class="idc-fade"<', r'<p class="idc-fade"><', innerhtml)
+	tree = etree.HTML(text)
+	return dict(walk(tree))
+
+
 
 ##
 # Removes HTML or XML character references and entities from a text string.
@@ -151,9 +182,13 @@ def GetIDCommentData(account, postid):
 
 	# get the "inner HTML" block (which contains the actual thread)
 	ihtml = re.sub(r'\\(.)', r'\1', IHTM_RE.search(rtext).group(1))
+
+	# Decode the InnerHTML data into a comment tree
+	ctree = ParseCommentTree(ihtml)
+
 	# blast it apart into individual comments
 	commenttext = CMNT_RE.findall(ihtml)
-	# now tie the comments in with the LT data
+	# now tie the comments in with the LT and nesting data
 	for comment in commenttext:
 		cid = int(comment[0])
 		ctxt = StripCommentTextHTML(comment[1])
@@ -161,6 +196,9 @@ def GetIDCommentData(account, postid):
 			if lt[i]['commentid'] == cid:
 				lt[i]['text'] = ctxt
 				break
+			if lt[i]['commentid'] in ctree:
+				lt[i]['parent'] = ctree[lt[i]['commentid']]
+
 
 	# TODO: Need to decode InnerHTML properly (XML parser?) and use it to get the message threading order. Ffffff...
 	# We're basically going to have to get the IDCommentSubThread<n> divs and see which IDComment<n> divs are inside them
