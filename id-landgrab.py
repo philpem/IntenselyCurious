@@ -292,11 +292,14 @@ if __name__ == '__main__':
 						0									# Is_Moderated - should be 0
 					))
 				except:
+					db.rollback()
 					print
 					print "!!! Something rotten in Denmark! Uncaught exception. XData is:"
 					print x
 					print
 					raise
+
+			db.commit()
 
 	cur.close()
 	db.close()
