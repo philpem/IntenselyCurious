@@ -21,9 +21,13 @@ import cookielib
 import re
 import htmlentitydefs
 from lxml import etree
+import MySQLdb
+from datetime import datetime
 
 # IntenseDebate account ID
 ID_ACCT="a52f66556303bc0fe20312cfad5cc8b9"
+# Control ID -- 1 for Precocious, 2 for Copper Road
+CONTROL_ID=1
 
 ###########
 # Dragons lurketh here (you probably don't want to change anything below this line)
@@ -70,8 +74,16 @@ def ParseLine(line):
 			fields.append(x.strip())
 	return fields
 
-def GetIDCommentScriptSrc(account, postid):
-	data = urllib.urlencode({'acct':account, 'postid':postid})
+def GetIDCommentScriptSrc(account, postid=None, url=None):
+	# http://intensedebate.com/js/genericCommentWrapper2.php?acct=a52f66556303bc0fe20312cfad5cc8b9&postid=&title=&url=http://precociouscomic.com/comic.php?page=1
+	if postid is not None:
+		data = urllib.urlencode({'acct':account, 'postid':postid, 'title':'', 'url':''})
+	elif url is not None:
+		data = urllib.urlencode({'acct':account, 'postid':'', 'title':'', 'url':url})
+	else:
+		print "WTF? Attempt to get the comment script URL with no usable ID!"
+		return None
+
 	req = urllib2.Request("http://intensedebate.com/js/genericCommentWrapper2.php?%s" % data, None, HEADERS)
 	resp = urllib2.urlopen(req)
 	pagestr = resp.read()
@@ -95,7 +107,7 @@ def ParseCommentTree(innerhtml):
 			if x:
 				cid = int(x.group('id'))
 				lp = lp + [(cid, parent)]
-				print "  "*depth, depth, parent, cid, tree.tag, " [%s]" % tree.get('id')
+				#print "  "*depth, depth, parent, cid, tree.tag, " [%s]" % tree.get('id')
 				for i in tree:
 					lp = lp + walk(i, depth+1, cid)
 				return lp
@@ -108,8 +120,6 @@ def ParseCommentTree(innerhtml):
 	text = re.sub(r'<p class="idc-fade"<', r'<p class="idc-fade"><', innerhtml)
 	tree = etree.HTML(text)
 	return dict(walk(tree))
-
-
 
 ##
 # Removes HTML or XML character references and entities from a text string.
@@ -164,9 +174,9 @@ CMNT_RE = re.compile(r'<div id="IDComment-CommentText([0-9]*)".*?>(.*?)</div>')
 
 # Used to retrieve a comment entry
 IDCD_RE = re.compile(r'commentObj.comments\[[0-9]*\]=new IDComment\(([^;]*)\)')
-def GetIDCommentData(account, postid):
-	posturl = GetIDCommentScriptSrc(account, postid)
-	req = urllib2.Request(posturl, None, HEADERS)
+def GetIDCommentData(account, postid=None, url=None):
+	postscript = GetIDCommentScriptSrc(account, postid, url)
+	req = urllib2.Request(postscript, None, HEADERS)
 	resp = urllib2.urlopen(req)
 	rtext = resp.read()
 	lines = IDCD_RE.findall(rtext)
@@ -188,35 +198,64 @@ def GetIDCommentData(account, postid):
 
 	# blast it apart into individual comments
 	commenttext = CMNT_RE.findall(ihtml)
-	# now tie the comments in with the LT and nesting data
+	# now tie the comments in with the LT data
 	for comment in commenttext:
 		cid = int(comment[0])
 		ctxt = StripCommentTextHTML(comment[1])
 		for i in range(len(lt)):
-			if lt[i]['commentid'] == cid:
+			if int(lt[i]['commentid']) == int(cid):
 				lt[i]['text'] = ctxt
 				break
-			if lt[i]['commentid'] in ctree:
-				lt[i]['parent'] = ctree[lt[i]['commentid']]
 
-
-	# TODO: Need to decode InnerHTML properly (XML parser?) and use it to get the message threading order. Ffffff...
-	# We're basically going to have to get the IDCommentSubThread<n> divs and see which IDComment<n> divs are inside them
+	# Sort out the threading order
+	for i in range(len(lt)):
+		if int(lt[i]['commentid']) in ctree:
+			lt[i]['parent'] = ctree[lt[i]['commentid']]
 
 	return lt
 
 
-postid=1199
+# Connect to MySQL
+if __name__ == '__main__':
+	db = MySQLdb.connect(host="localhost", user="precocious", passwd="password", db="precocious")
+	cur = db.cursor()
 
-#while True:
-data = GetIDCommentData(ID_ACCT, postid)
+#	postid=1199
 
-for x in data:
-	print x
-	continue
-	y = ParseLine(x)
-	if y[2] != y[7]:
-		print "*** ", y
-	else:
-		print "    ", y
+	for postid in range(100):
+		pid=postid+1
+		print "\n\nProcessing postid=%d" % pid
+
+		if (pid <= 100):
+			data = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/comic.php?page=%d' % pid)
+		elif (pid > 100) and (pid <= 241):
+			data = GetIDCommentData(ID_ACCT, postid=(pid-100))
+		else:
+			data = GetIDCommentData(ID_ACCT, postid=pid)
+
+		for x in data:
+			print x
+			cur.execute("""INSERT INTO comments
+			(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
+			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+			(
+				int(x['commentid']),				# Sequential ID number
+				int(CONTROL_ID),					# Always 1 for Precocious, 2 for Copper Road
+				int(pid),							# Comic ID #, should be available via the ID info
+				datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
+				int(x['parent']),					# Comment ID # of any parent comment
+				x['displayName'],					# Commenter Name
+				"",									# comment_author_avatar --> should always be null
+				"",									# Commenter email address
+				"",									# FIXME Commenter website
+				0,									# FIXME 1 = show website, 0 = do not show site
+				"unknown",							# FIXME? IP address of commenter
+				x['text'],							# Text of comment
+				0,									# Rank - should be 0
+				0,									# Is_Spam - should be 0
+				0									# Is_Moderated - should be 0
+			))
+
+	cur.close()
+	db.close()
 
