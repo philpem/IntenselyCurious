@@ -26,8 +26,13 @@ from datetime import datetime, date
 
 # IntenseDebate account ID
 ID_ACCT="a52f66556303bc0fe20312cfad5cc8b9"
-# Control ID -- 1 for Precocious, 2 for Copper Road
-CONTROL_ID=1
+
+CONTROLS = [
+		# Control ID	Last strip ID		IntenseDebate ID prefix
+		{'cid': 1,		'strips': 1215,		'idpfx': ''					},		# Precocious
+		{'cid': 2,		'strips': 100,		'idpfx': 'copper'			}		# Copper Road
+	]
+
 
 ###########
 # Dragons lurketh here (you probably don't want to change anything below this line)
@@ -226,64 +231,72 @@ if __name__ == '__main__':
 	db = MySQLdb.connect(host="localhost", user="precocious", passwd="password", db="precocious")
 	cur = db.cursor()
 
+	for comic in CONTROLS:
+		CONTROL_ID = comic['cid']
+		NSTRIPS = comic['strips']
+		IDPREFIX = comic['idpfx']
 
-	# postid=1199
-	# for XXXDEBUG in range(1):
-	for postid in range(100):
-		pid=postid+1
-		print "\n\nProcessing postid=%d" % pid
+		print "----- Processing Control_ID %d ('%s'); %d strips to import -----" % (CONTROL_ID, IDPREFIX, NSTRIPS)
 
-		if (pid <= 100):
-			# Comments for strips up to and including #100 have their comments stored in two places.
-			# There's the "original" location, which we'll deal with first...
-			data1 = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/comic.php?page=%d' % pid)
+		for pid in range(1, NSTRIPS+1):
+			print "\n\nProcessing postid=%d" % pid
 
-			# And there's the "replacement" location which kicked in after the site move...
-			# First figure out the date offset from the first strip...
-			dt = date.fromordinal(date(2009,3,9).toordinal() + pid - 1)
-			# Turn that into a URL which follows Clickthulhu's format
-			data2 = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/archive/comic/%04d/%02d/%02d' % (dt.year, dt.month, dt.day))
+			if CONTROL_ID == 1:
+				# -- PRECOCIOUS --
+				if (pid <= 100):
+					# Comments for strips up to and including #100 have their comments stored in two places.
+					# There's the "original" location, which we'll deal with first...
+					data1 = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/comic.php?page=%d' % pid)
 
-			# Now mash both datasets together
-			data = data1 + data2
-		elif (pid > 100) and (pid <= 241):
-			data = GetIDCommentData(ID_ACCT, postid=(pid-100))
-		else:
-			data = GetIDCommentData(ID_ACCT, postid=pid)
+					# And there's the "replacement" location which kicked in after the site move...
+					# First figure out the date offset from the first strip...
+					dt = date.fromordinal(date(2009,3,9).toordinal() + pid - 1)
+					# Turn that into a URL which follows Clickthulhu's format
+					data2 = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/archive/comic/%04d/%02d/%02d' % (dt.year, dt.month, dt.day))
 
-		for x in data:
-			# print x
-			if 'text' not in x:
-				print ">>> WARNING: Post %d comment %d has been skipped; reason: no text found, deleted comment?" % (pid, int(x['commentid']))
-				continue
+					# Now mash both datasets together
+					data = data1 + data2
+				elif (pid > 100) and (pid <= 241):
+					data = GetIDCommentData(ID_ACCT, postid=(pid-100))
+				else:
+					data = GetIDCommentData(ID_ACCT, postid=pid)
+			else:
+				# -- COPPER ROAD --
+				data = GetIDCommentData(ID_ACCT, postid='%s%d' % (IDPREFIX, pid))
 
-			try:
-				cur.execute("""INSERT INTO comments
-				(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-				(
-					int(x['commentid']),				# Sequential ID number
-					int(CONTROL_ID),					# Always 1 for Precocious, 2 for Copper Road
-					int(pid),							# Comic ID #, should be available via the ID info
-					datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
-					int(x['parent']),					# Comment ID # of any parent comment
-					unescape(x['displayName']),			# Commenter Name
-					"",									# comment_author_avatar --> should always be null
-					"",									# Commenter email address
-					"",									# FIXME Commenter website
-					0,									# FIXME 1 = show website, 0 = do not show site
-					"unknown",							# FIXME? IP address of commenter
-					x['text'],							# Text of comment
-					0,									# Rank - should be 0
-					0,									# Is_Spam - should be 0
-					0									# Is_Moderated - should be 0
-				))
-			except:
-				print
-				print "!!! Something rotten in Denmark! Uncaught exception. XData is:"
-				print x
-				print
-				raise
+			for x in data:
+				# print x
+				if 'text' not in x:
+					print ">>> WARNING: Post %d comment %d has been skipped; reason: no text found, deleted comment?" % (pid, int(x['commentid']))
+					continue
+
+				try:
+					cur.execute("""INSERT INTO comments
+					(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
+					VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+					(
+						int(x['commentid']),				# Sequential ID number
+						int(CONTROL_ID),					# Always 1 for Precocious, 2 for Copper Road
+						int(pid),							# Comic ID #, should be available via the ID info
+						datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
+						int(x['parent']),					# Comment ID # of any parent comment
+						unescape(x['displayName']),			# Commenter Name
+						"",									# comment_author_avatar --> should always be null
+						"",									# Commenter email address
+						"",									# FIXME Commenter website
+						0,									# FIXME 1 = show website, 0 = do not show site
+						"unknown",							# FIXME? IP address of commenter
+						x['text'],							# Text of comment
+						0,									# Rank - should be 0
+						0,									# Is_Spam - should be 0
+						0									# Is_Moderated - should be 0
+					))
+				except:
+					print
+					print "!!! Something rotten in Denmark! Uncaught exception. XData is:"
+					print x
+					print
+					raise
 
 	cur.close()
 	db.close()
