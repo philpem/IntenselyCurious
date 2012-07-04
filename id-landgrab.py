@@ -281,7 +281,7 @@ if __name__ == '__main__':
 						int(pid),							# Comic ID #, should be available via the ID info
 						calendar.timegm(datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S").timetuple()),		# FIXME Time/Date posted
 						int(x['parent']),					# Comment ID # of any parent comment
-						unescape(x['displayName']).encode('utf-8'),		# Commenter Name
+						unescape(str(x['displayName'])).encode('utf-8'),		# Commenter Name
 						"",									# comment_author_avatar --> should always be null
 						"",									# Commenter email address
 						"",									# FIXME Commenter website
