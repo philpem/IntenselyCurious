@@ -22,7 +22,7 @@ import re
 import htmlentitydefs
 from lxml import etree
 import MySQLdb
-from datetime import datetime
+from datetime import datetime, date
 
 # IntenseDebate account ID
 ID_ACCT="a52f66556303bc0fe20312cfad5cc8b9"
@@ -77,8 +77,10 @@ def ParseLine(line):
 def GetIDCommentScriptSrc(account, postid=None, url=None):
 	# http://intensedebate.com/js/genericCommentWrapper2.php?acct=a52f66556303bc0fe20312cfad5cc8b9&postid=&title=&url=http://precociouscomic.com/comic.php?page=1
 	if postid is not None:
+		print "--- Get By PostID: %s" % postid
 		data = urllib.urlencode({'acct':account, 'postid':postid, 'title':'', 'url':''})
 	elif url is not None:
+		print "--- Get By URL: %s" % url
 		data = urllib.urlencode({'acct':account, 'postid':'', 'title':'', 'url':url})
 	else:
 		print "WTF? Attempt to get the comment script URL with no usable ID!"
@@ -224,16 +226,26 @@ if __name__ == '__main__':
 	db = MySQLdb.connect(host="localhost", user="precocious", passwd="password", db="precocious")
 	cur = db.cursor()
 
-#	postid=1199
 
+	# postid=1199
+	# for XXXDEBUG in range(1):
 	for postid in range(100):
-#	while True:
-#		postid = 43
 		pid=postid+1
 		print "\n\nProcessing postid=%d" % pid
 
 		if (pid <= 100):
-			data = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/comic.php?page=%d' % pid)
+			# Comments for strips up to and including #100 have their comments stored in two places.
+			# There's the "original" location, which we'll deal with first...
+			data1 = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/comic.php?page=%d' % pid)
+
+			# And there's the "replacement" location which kicked in after the site move...
+			# First figure out the date offset from the first strip...
+			dt = date.fromordinal(date(2009,3,9).toordinal() + pid - 1)
+			# Turn that into a URL which follows Clickthulhu's format
+			data2 = GetIDCommentData(ID_ACCT, url='http://precociouscomic.com/archive/comic/%04d/%02d/%02d' % (dt.year, dt.month, dt.day))
+
+			# Now mash both datasets together
+			data = data1 + data2
 		elif (pid > 100) and (pid <= 241):
 			data = GetIDCommentData(ID_ACCT, postid=(pid-100))
 		else:
@@ -272,9 +284,6 @@ if __name__ == '__main__':
 				print x
 				print
 				raise
-
-		# FIXME remove
-		# break
 
 	cur.close()
 	db.close()
