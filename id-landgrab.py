@@ -173,7 +173,8 @@ CMNT_RE = re.compile(r'<div id="IDComment-CommentText([0-9]*)".*?>(.*?)</div>')
 # NOTE: span id="IDCommentVoteScore<n>" is used to store the comment's voting score
 
 # Used to retrieve a comment entry
-IDCD_RE = re.compile(r'commentObj.comments\[[0-9]*\]=new IDComment\(([^;]*)\)')
+IDCD_RE = re.compile(r'commentObj.comments\[[0-9]*\]=new IDComment\((.*?) \);')
+
 def GetIDCommentData(account, postid=None, url=None):
 	postscript = GetIDCommentScriptSrc(account, postid, url)
 	req = urllib2.Request(postscript, None, HEADERS)
@@ -254,7 +255,7 @@ if __name__ == '__main__':
 					int(pid),							# Comic ID #, should be available via the ID info
 					datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
 					int(x['parent']),					# Comment ID # of any parent comment
-					x['displayName'],					# Commenter Name
+					unescape(x['displayName']),			# Commenter Name
 					"",									# comment_author_avatar --> should always be null
 					"",									# Commenter email address
 					"",									# FIXME Commenter website
