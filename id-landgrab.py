@@ -29,9 +29,9 @@ import time, calendar
 ID_ACCT="a52f66556303bc0fe20312cfad5cc8b9"
 
 CONTROLS = [
-		# Control ID	Last strip ID		IntenseDebate ID prefix
-		{'cid': 1,		'strips': 1215,		'idpfx': ''					},		# Precocious
-		{'cid': 2,		'strips': 100,		'idpfx': 'copper'			}		# Copper Road
+		# Control ID	First strip ID		Last strip ID		IntenseDebate ID prefix
+		{'cid': 1,		'first': 1,			'last': 1215,		'idpfx': ''					},		# Precocious
+		{'cid': 2,		'first': 1,			'last': 100,		'idpfx': 'copper'			},		# Copper Road
 	]
 
 
@@ -234,12 +234,13 @@ if __name__ == '__main__':
 
 	for comic in CONTROLS:
 		CONTROL_ID = comic['cid']
-		NSTRIPS = comic['strips']
+		NLASTSTRIP = comic['last']
+		NFIRSTSTRIP = comic['first']
 		IDPREFIX = comic['idpfx']
 
-		print "----- Processing Control_ID %d ('%s'); %d strips to import -----" % (CONTROL_ID, IDPREFIX, NSTRIPS)
+		print "----- Processing Control_ID %d ('%s'); %d strips to import -----" % (CONTROL_ID, IDPREFIX, NLASTSTRIP - NFIRSTSTRIP + 1)
 
-		for pid in range(1, NSTRIPS+1):
+		for pid in range(NFIRSTSTRIP, NLASTSTRIP+1):
 			print "\n\nProcessing postid=%d" % pid
 
 			if CONTROL_ID == 1:
