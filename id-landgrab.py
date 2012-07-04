@@ -23,6 +23,7 @@ import htmlentitydefs
 from lxml import etree
 import MySQLdb
 from datetime import datetime, date
+import time, calendar
 
 # IntenseDebate account ID
 ID_ACCT="a52f66556303bc0fe20312cfad5cc8b9"
@@ -273,12 +274,12 @@ if __name__ == '__main__':
 				try:
 					cur.execute("""INSERT INTO comments
 					(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
-					VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+					VALUES (%s, %s, %s, FROM_UNIXTIME(%s), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
 					(
 						int(x['commentid']),				# Sequential ID number
 						int(CONTROL_ID),					# Always 1 for Precocious, 2 for Copper Road
 						int(pid),							# Comic ID #, should be available via the ID info
-						datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
+						calendar.timegm(datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S").timetuple()),		# FIXME Time/Date posted
 						int(x['parent']),					# Comment ID # of any parent comment
 						unescape(x['displayName']).encode('utf-8'),		# Commenter Name
 						"",									# comment_author_avatar --> should always be null
