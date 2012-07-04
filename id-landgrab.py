@@ -153,7 +153,7 @@ def unescape(text):
 			except KeyError:
 				pass
 		return text # leave as is
-	return re.sub("&#?\w+;", fixup, text)
+	return re.sub("&#?\w+;", fixup, unicode(text, 'utf-8'))
 
 # Turn IntenseDebate's comment HTML into something we can actually use
 def StripCommentTextHTML(s):
