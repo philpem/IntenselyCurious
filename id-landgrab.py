@@ -175,7 +175,7 @@ def StripCommentTextHTML(s):
 # Used to get the InnerHTML blob for a comment
 IHTM_RE = re.compile(r'var innerHTML = \'(.*)\'; idcCommentsDiv')
 # Used to retrieve the text of a comment
-CMNT_RE = re.compile(r'<div id="IDComment-CommentText([0-9]*)".*?>(.*?)</div>')
+CMNT_RE = re.compile(r'<div id="IDComment-CommentText([0-9]+)".*?>(.*?)</div>')
 
 # NOTE: span id="IDCommentVoteScore<n>" is used to store the comment's voting score
 
