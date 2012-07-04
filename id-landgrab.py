@@ -244,26 +244,33 @@ if __name__ == '__main__':
 				print ">>> WARNING: Post %d comment %d has been skipped; reason: no text found, deleted comment?" % (pid, int(x['commentid']))
 				continue
 
-			cur.execute("""INSERT INTO comments
-			(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
-			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-			(
-				int(x['commentid']),				# Sequential ID number
-				int(CONTROL_ID),					# Always 1 for Precocious, 2 for Copper Road
-				int(pid),							# Comic ID #, should be available via the ID info
-				datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
-				int(x['parent']),					# Comment ID # of any parent comment
-				x['displayName'],					# Commenter Name
-				"",									# comment_author_avatar --> should always be null
-				"",									# Commenter email address
-				"",									# FIXME Commenter website
-				0,									# FIXME 1 = show website, 0 = do not show site
-				"unknown",							# FIXME? IP address of commenter
-				x['text'],							# Text of comment
-				0,									# Rank - should be 0
-				0,									# Is_Spam - should be 0
-				0									# Is_Moderated - should be 0
-			))
+			try:
+				cur.execute("""INSERT INTO comments
+				(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+				(
+					int(x['commentid']),				# Sequential ID number
+					int(CONTROL_ID),					# Always 1 for Precocious, 2 for Copper Road
+					int(pid),							# Comic ID #, should be available via the ID info
+					datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
+					int(x['parent']),					# Comment ID # of any parent comment
+					x['displayName'],					# Commenter Name
+					"",									# comment_author_avatar --> should always be null
+					"",									# Commenter email address
+					"",									# FIXME Commenter website
+					0,									# FIXME 1 = show website, 0 = do not show site
+					"unknown",							# FIXME? IP address of commenter
+					x['text'],							# Text of comment
+					0,									# Rank - should be 0
+					0,									# Is_Spam - should be 0
+					0									# Is_Moderated - should be 0
+				))
+			except:
+				print
+				print "!!! Something rotten in Denmark! Uncaught exception. XData is:"
+				print x
+				print
+				raise
 
 		# FIXME remove
 		# break
