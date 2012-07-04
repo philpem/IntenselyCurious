@@ -211,6 +211,9 @@ def GetIDCommentData(account, postid=None, url=None):
 	for i in range(len(lt)):
 		if int(lt[i]['commentid']) in ctree:
 			lt[i]['parent'] = ctree[lt[i]['commentid']]
+		else:
+			print ">>> AARGH: No thread parent information found for comment %d. Assuming this is a rooted post." % int(lt[i]['commentid'])
+			lt[i]['parent'] = 0
 
 	return lt
 
@@ -223,6 +226,8 @@ if __name__ == '__main__':
 #	postid=1199
 
 	for postid in range(100):
+#	while True:
+#		postid = 43
 		pid=postid+1
 		print "\n\nProcessing postid=%d" % pid
 
@@ -234,7 +239,11 @@ if __name__ == '__main__':
 			data = GetIDCommentData(ID_ACCT, postid=pid)
 
 		for x in data:
-			print x
+			# print x
+			if 'text' not in x:
+				print ">>> WARNING: Post %d comment %d has been skipped; reason: no text found, deleted comment?" % (pid, int(x['commentid']))
+				continue
+
 			cur.execute("""INSERT INTO comments
 			(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
 			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
@@ -255,6 +264,9 @@ if __name__ == '__main__':
 				0,									# Is_Spam - should be 0
 				0									# Is_Moderated - should be 0
 			))
+
+		# FIXME remove
+		# break
 
 	cur.close()
 	db.close()
