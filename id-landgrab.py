@@ -280,13 +280,13 @@ if __name__ == '__main__':
 						int(pid),							# Comic ID #, should be available via the ID info
 						datetime.strptime(x['time'], "%B %d, %Y %H:%M:%S"),		# FIXME Time/Date posted
 						int(x['parent']),					# Comment ID # of any parent comment
-						unescape(x['displayName']),			# Commenter Name
+						unescape(x['displayName']).encode('utf-8'),		# Commenter Name
 						"",									# comment_author_avatar --> should always be null
 						"",									# Commenter email address
 						"",									# FIXME Commenter website
 						0,									# FIXME 1 = show website, 0 = do not show site
 						"unknown",							# FIXME? IP address of commenter
-						x['text'],							# Text of comment
+						x['text'].encode('utf-8'),			# Text of comment
 						0,									# Rank - should be 0
 						0,									# Is_Spam - should be 0
 						0									# Is_Moderated - should be 0
