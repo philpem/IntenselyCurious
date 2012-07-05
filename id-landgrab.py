@@ -229,7 +229,7 @@ def GetIDCommentData(account, postid=None, url=None):
 
 # Connect to MySQL
 if __name__ == '__main__':
-	db = MySQLdb.connect(host="localhost", user="precocious", passwd="password", db="precocious")
+	db = MySQLdb.connect(host="localhost", user="precocious", passwd="password", db="precocious", charset="utf8")
 	cur = db.cursor()
 
 	for comic in CONTROLS:
