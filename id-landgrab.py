@@ -30,7 +30,7 @@ ID_ACCT="a52f66556303bc0fe20312cfad5cc8b9"
 
 CONTROLS = [
 		# Control ID	First strip ID		Last strip ID		IntenseDebate ID prefix
-		{'cid': 1,		'first': 1,			'last': 1215,		'idpfx': ''					},		# Precocious
+		{'cid': 1,		'first': 1,			'last': 1300,		'idpfx': ''					},		# Precocious
 		{'cid': 2,		'first': 1,			'last': 100,		'idpfx': 'copper'			},		# Copper Road
 	]
 
@@ -273,7 +273,7 @@ if __name__ == '__main__':
 					continue
 
 				try:
-					cur.execute("""INSERT INTO comments
+					cur.execute("""REPLACE INTO comments
 					(comment_id, control_id, comic_id, comment_timestamp, comment_parent_id, comment_author, comment_author_avatar, comment_author_email, comment_author_link, comment_author_show_link, comment_author_ip, comment_text, comment_rank, comment_is_spam, comment_is_moderated)
 					VALUES (%s, %s, %s, FROM_UNIXTIME(%s), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
 					(
